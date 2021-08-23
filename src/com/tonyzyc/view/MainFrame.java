@@ -34,6 +34,8 @@ public class MainFrame extends JFrame {
     public boolean isReady;
     public JButton chuPaiJButton;
     public JButton buChuJButton;
+    public JButton chaJButton;
+    public JButton gouJButton;
     public JLabel timeLabel;
     public JLabel msgLabel;
     // store the current poker label list
@@ -43,17 +45,20 @@ public class MainFrame extends JFrame {
     public JLabel sendGongJLabel;
     public boolean needReceiveGone;
     // counter thread, used to countdown for time
-    ChuPaiCountThread chuPaiCountThread;
+    public ChuPaiCountThread chuPaiCountThread = new ChuPaiCountThread(100, this);
     // store the selected pokerLabels
     public List<PokerLabel> selectedPokerLabels = new ArrayList<>();
     // 显示当前出牌list
     public List<PokerLabel> showOutPokerLabels = new ArrayList<>();
     // check if the current player 是否出牌
     public boolean isOut;
+    // check if current player 正在叉
+    public boolean isCha;
     // last player who 出牌
     public int prevPlayerId = -1;
 
     public MainFrame(String uname, Socket socket, int numOfPlayers) {
+        System.out.println("this is user " + uname);
         this.numOfPlayers = numOfPlayers;
         this.uname = uname;
         this.socket = socket;
@@ -97,8 +102,22 @@ public class MainFrame extends JFrame {
         buChuJButton.setVisible(false);
         this.myPanel.add(buChuJButton);
 
+        chaJButton = new JButton("叉");
+        chaJButton.setBounds(550, 350, 100, 40);
+        chaJButton.setFont(new Font("Dialog", 1, 20));
+        chaJButton.addMouseListener(new MyMouseEvent());
+        chaJButton.setVisible(false);
+        this.myPanel.add(chaJButton);
+
+        gouJButton = new JButton("勾");
+        gouJButton.setBounds(660, 350, 100, 40);
+        gouJButton.setFont(new Font("Dialog", 1, 20));
+        gouJButton.addMouseListener(new MyMouseEvent());
+        gouJButton.setVisible(false);
+        this.myPanel.add(gouJButton);
+
         timeLabel = new JLabel();
-        timeLabel.setBounds(550, 350, 50, 50);
+        timeLabel.setBounds(770, 350, 50, 50);
         timeLabel.setFont(new Font("Dialog", 0, 30));
         timeLabel.setForeground(Color.red);
         timeLabel.setVisible(false);
@@ -129,7 +148,7 @@ public class MainFrame extends JFrame {
         List<Poker> pokers = currentPlayer.getPokers();
         for (int i = 0; i < pokers.size(); i++) {
             Poker poker = pokers.get(i);
-            PokerLabel pokerLabel = new PokerLabel(poker.getId(), poker.getName(), poker.getNum(), poker.isHun());
+            PokerLabel pokerLabel = new PokerLabel(poker.getId(), poker.getName(), poker.getColor(), poker.getNum(), poker.isHun());
             // show the poker
             pokerLabel.turnUp();
             this.pokerLabels.add(pokerLabel);
@@ -173,17 +192,31 @@ public class MainFrame extends JFrame {
         // start 出牌定时器
         chuPaiCountThread = new ChuPaiCountThread(100, this);
         chuPaiCountThread.start();
+    }
 
+    public void showChaJButton() {
+        chaJButton.setVisible(true);
+        this.repaint();
+    }
+
+    public void showGouJButton() {
+        gouJButton.setVisible(true);
+        this.repaint();
     }
 
     // display 出牌, 不出牌message
     public void showMsg(int typeId, String msg) {
-        msgLabel.setVisible(true);
-        msgLabel.setBounds(650, 300, 200, 80);
+        System.out.println(uname + " show message: " + typeId + " " + msg);
+        msgLabel.setBounds(650, 250, 200, 80);
         if (typeId == 3) {
             msgLabel.setText(msg + " 不出");
+        } else if (typeId == 5) {
+            msgLabel.setText(msg + " 叉");
+        } else if (typeId == 6) {
+            msgLabel.setText(msg + " 勾");
         }
         msgLabel.setFont(new Font("Dialog", 0, 20));
+        msgLabel.setVisible(true);
         this.repaint();
     }
 
@@ -195,7 +228,7 @@ public class MainFrame extends JFrame {
         showOutPokerLabels.clear();
         for (int i = 0; i < outPokers.size(); i++) {
             Poker poker = outPokers.get(i);
-            PokerLabel pokerLabel = new PokerLabel(poker.getId(), poker.getName(), poker.getNum(), poker.isHun());
+            PokerLabel pokerLabel = new PokerLabel(poker.getId(), poker.getName(), poker.getColor(), poker.getNum(), poker.isHun());
             pokerLabel.setLocation(400 + 30 * i, 200);
             pokerLabel.turnUp();
             myPanel.add(pokerLabel);
@@ -224,6 +257,24 @@ public class MainFrame extends JFrame {
         this.repaint();
     }
 
+    public void timeOutRemoveButton() {
+        // when timeout, remove button
+        chuPaiJButton.setVisible(false);
+        buChuJButton.setVisible(false);
+        timeLabel.setVisible(false);
+        chaJButton.setVisible(false);
+        gouJButton.setVisible(false);
+    }
+
+    public List<Poker> changePokerLabelToPoker(List<PokerLabel> pokerLabelList) {
+        List<Poker> list = new ArrayList<>();
+        for (PokerLabel pokerLabel: pokerLabelList) {
+            Poker poker = new Poker(pokerLabel.getId(), pokerLabel.getName(), pokerLabel.getColor(), pokerLabel.getNum());
+            list.add(poker);
+        }
+        return list;
+    }
+
     class MyMouseEvent implements MouseListener {
         @Override
         public void mouseClicked(MouseEvent e) {
@@ -247,6 +298,8 @@ public class MainFrame extends JFrame {
                         chuPaiJButton.setVisible(false);
                         buChuJButton.setVisible(false);
                         timeLabel.setVisible(false);
+                        chaJButton.setVisible(false);
+                        gouJButton.setVisible(false);
                     } else {
                         JOptionPane.showMessageDialog(null, "请按规则出牌");
                     }
@@ -259,7 +312,27 @@ public class MainFrame extends JFrame {
                 chuPaiCountThread.setRun(false);
                 chuPaiJButton.setVisible(false);
                 buChuJButton.setVisible(false);
+                chaJButton.setVisible(false);
+                gouJButton.setVisible(false);
                 timeLabel.setVisible(false);
+            } else if (e.getSource().equals(chaJButton)) {
+                try {
+                    if (PokerRule.isCha(showOutPokerLabels, selectedPokerLabels)) {
+                        isOut = true;
+                        chaJButton.setVisible(false);
+                        // send message to server
+                        Message msg = new Message(5, currentPlayer.getId(), uname, "叉", changePokerLabelToPoker(selectedPokerLabels));
+                        removeOutPokerFromPokerList();
+                        String msgJSONString = JSON.toJSONString(msg);
+                        sendThread.setMsg(msgJSONString);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "请按规则出牌");
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            } else if (e.getSource().equals(gouJButton)) {
+                System.out.println("Click 勾");
             }
         }
 
@@ -291,14 +364,11 @@ public class MainFrame extends JFrame {
         public void mouseClicked(MouseEvent e) {
             // choose the poker or un-choose the poker
             PokerLabel pokerLabel = (PokerLabel) e.getSource();
-            System.out.println("clicked poker");
             if (pokerLabel.isSelected()) {
-                System.out.println("unselect " + pokerLabel);
                 pokerLabel.setLocation(pokerLabel.getX(), pokerLabel.getY() + 30);
                 selectedPokerLabels.remove(pokerLabel);
                 pokerLabel.setSelected(false);
             } else {
-                System.out.println("select " + pokerLabel);
                 pokerLabel.setLocation(pokerLabel.getX(), pokerLabel.getY() - 30);
                 selectedPokerLabels.add(pokerLabel);
                 pokerLabel.setSelected(true);

@@ -7,6 +7,7 @@ import java.util.Map;
 public class PokerLabel extends JLabel implements Comparable {
     private int id;
     private String name;
+    private String color;
     private int num;
     private boolean isOut;
     private boolean isUp;
@@ -72,6 +73,14 @@ public class PokerLabel extends JLabel implements Comparable {
         isSelected = selected;
     }
 
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
     @Override
     public String toString() {
         return "PokerLabel{" +
@@ -89,17 +98,19 @@ public class PokerLabel extends JLabel implements Comparable {
         this.setSize(105, 150);
     }
 
-    public PokerLabel(int id, String name, int num, boolean isHun) {
+    public PokerLabel(int id, String name, String color, int num, boolean isHun) {
         this.id = id;
         this.name = name;
+        this.color = color;
         this.num = num;
         this.isHun = isHun;
         this.setSize(105, 150);
     }
 
-    public PokerLabel(int id, String name, int num, boolean isOut, boolean isUp, boolean isHun) {
+    public PokerLabel(int id, String name, String color, int num, boolean isOut, boolean isUp, boolean isHun) {
         this.id = id;
         this.name = name;
+        this.color = color;
         this.num = num;
         this.isOut = isOut;
         this.isUp = isUp;

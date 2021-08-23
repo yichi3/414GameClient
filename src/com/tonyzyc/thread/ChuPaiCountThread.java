@@ -13,11 +13,14 @@ public class ChuPaiCountThread extends Thread {
     private int time;
     private MainFrame mainFrame;
     private boolean isRun;
+    private boolean isCha;
+    private int chaPlayerId;
 
     public ChuPaiCountThread(int time, MainFrame mainFrame) {
         this.time = time;
         this.mainFrame = mainFrame;
         this.isRun = true;
+        this.isCha = false;
     }
 
     public boolean isRun() {
@@ -28,8 +31,24 @@ public class ChuPaiCountThread extends Thread {
         isRun = run;
     }
 
+    public boolean isCha() {
+        return isCha;
+    }
+
+    public void setCha(boolean cha) {
+        isCha = cha;
+    }
+
+    public int getChaPlayerId() {
+        return chaPlayerId;
+    }
+
+    public void setChaPlayerId(int chaPlayerId) {
+        this.chaPlayerId = chaPlayerId;
+    }
+
     public void run() {
-        while (time >= 0 && isRun) {
+        while (time >= 0 && isRun && !isCha) {
             mainFrame.timeLabel.setText(time+"");
             time--;
             try {
@@ -39,25 +58,29 @@ public class ChuPaiCountThread extends Thread {
             }
         }
         Message msg = null;
-        if (time < 0 || !mainFrame.isOut) {
-            // if time is up or choose to 不出
-            msg = new Message(3, mainFrame.currentPlayer.getId(), mainFrame.currentPlayer.getPlayerUname(), "不出", null);
-
+        if (!isCha) {
+            if (time < 0 || !mainFrame.isOut) {
+                // if time is up or choose to 不出
+                msg = new Message(3, mainFrame.currentPlayer.getId(), mainFrame.currentPlayer.getPlayerUname(), "不出", null);
+                mainFrame.timeOutRemoveButton();
+            } else {
+                msg = new Message(4, mainFrame.currentPlayer.getId(), mainFrame.currentPlayer.getPlayerUname(), "出牌", mainFrame.changePokerLabelToPoker(mainFrame.selectedPokerLabels));
+                // remove outPoker from my deck
+                mainFrame.removeOutPokerFromPokerList();
+            }
+            String msgJSONString = JSON.toJSONString(msg);
+            mainFrame.sendThread.setMsg(msgJSONString);
         } else {
-            msg = new Message(4, mainFrame.currentPlayer.getId(), mainFrame.currentPlayer.getPlayerUname(), "出牌", changePokerLabelToPoker(mainFrame.selectedPokerLabels));
-            // remove outPoker from my deck
-            mainFrame.removeOutPokerFromPokerList();
+            // someone 叉, need to stop the count and stop the round
+            if (mainFrame.currentPlayer.getId() != chaPlayerId) {
+                isRun = false;
+                mainFrame.chuPaiJButton.setVisible(false);
+                mainFrame.buChuJButton.setVisible(false);
+                mainFrame.timeLabel.setVisible(false);
+                mainFrame.msgLabel.setVisible(false);
+                mainFrame.chaJButton.setVisible(false);
+            }
+            chaPlayerId = -1;
         }
-        String msgJSONString = JSON.toJSONString(msg);
-        mainFrame.sendThread.setMsg(msgJSONString);
-    }
-
-    private List<Poker> changePokerLabelToPoker(List<PokerLabel> pokerLabelList) {
-        List<Poker> list = new ArrayList<>();
-        for (PokerLabel pokerLabel: pokerLabelList) {
-            Poker poker = new Poker(pokerLabel.getId(), pokerLabel.getName(), pokerLabel.getNum());
-            list.add(poker);
-        }
-        return list;
     }
 }
