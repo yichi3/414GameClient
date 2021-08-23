@@ -9,6 +9,8 @@ import com.tonyzyc.thread.ChuPaiCountThread;
 import com.tonyzyc.thread.ReceiveThread;
 import com.tonyzyc.thread.SendThread;
 import com.tonyzyc.util.GameUtil;
+import com.tonyzyc.util.PokerRule;
+import com.tonyzyc.util.PokerType;
 
 import javax.swing.*;
 import java.awt.*;
@@ -49,7 +51,7 @@ public class MainFrame extends JFrame {
     // check if the current player 是否出牌
     public boolean isOut;
     // last player who 出牌
-    public int prevPlayerId;
+    public int prevPlayerId = -1;
 
     public MainFrame(String uname, Socket socket, int numOfPlayers) {
         this.numOfPlayers = numOfPlayers;
@@ -177,7 +179,7 @@ public class MainFrame extends JFrame {
     // display 出牌, 不出牌message
     public void showMsg(int typeId, String msg) {
         msgLabel.setVisible(true);
-        msgLabel.setBounds(500, 300, 120, 80);
+        msgLabel.setBounds(650, 300, 200, 80);
         if (typeId == 3) {
             msgLabel.setText(msg + " 不出");
         }
@@ -214,7 +216,7 @@ public class MainFrame extends JFrame {
         // 3. sort remaining pokerLabel
         for (int i = 0; i < pokerLabels.size(); i++) {
             myPanel.setComponentZOrder(pokerLabels.get(i), 0);
-            GameUtil.move(pokerLabels.get(i), 300 + 30 * i, 450, false);
+            GameUtil.move(pokerLabels.get(i), 180 + 30 * i, 450, false);
         }
         // clear selected poker list
         selectedPokerLabels.clear();
@@ -235,12 +237,23 @@ public class MainFrame extends JFrame {
                 Message msg = new Message(1, 0, uname, "Ready", null);
                 sendThread.setMsg(JSON.toJSONString(msg));
             } else if (e.getSource().equals(chuPaiJButton)) {
-                // stop the counter
-                isOut = true;
-                chuPaiCountThread.setRun(false);
-                chuPaiJButton.setVisible(false);
-                buChuJButton.setVisible(false);
-                timeLabel.setVisible(false);
+                // need to check if the out poker is valid
+                PokerType pokerType = PokerRule.checkPokerType(selectedPokerLabels);
+                if (!pokerType.equals(PokerType.p_error)) {
+                    if (prevPlayerId == -1 || prevPlayerId == currentPlayer.getId() || PokerRule.isBigger(showOutPokerLabels, selectedPokerLabels)) {
+                        // stop the counter
+                        isOut = true;
+                        chuPaiCountThread.setRun(false);
+                        chuPaiJButton.setVisible(false);
+                        buChuJButton.setVisible(false);
+                        timeLabel.setVisible(false);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "请按规则出牌");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null, "不符合牌型");
+                }
+
             } else if (e.getSource().equals(buChuJButton)) {
                 isOut = false;
                 chuPaiCountThread.setRun(false);
@@ -278,6 +291,7 @@ public class MainFrame extends JFrame {
         public void mouseClicked(MouseEvent e) {
             // choose the poker or un-choose the poker
             PokerLabel pokerLabel = (PokerLabel) e.getSource();
+            System.out.println("clicked poker");
             if (pokerLabel.isSelected()) {
                 System.out.println("unselect " + pokerLabel);
                 pokerLabel.setLocation(pokerLabel.getX(), pokerLabel.getY() + 30);

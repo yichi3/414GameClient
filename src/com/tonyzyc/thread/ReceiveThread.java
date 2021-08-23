@@ -67,6 +67,7 @@ public class ReceiveThread extends Thread {
                         mainFrame.showAllPlayersInfo(players);
                         // all players have arrived, get to the second step
                         step = 1;
+                        mainFrame.addClickEventToPoker();
                         if (mainFrame.currentPlayer.isFirst()) {
                             // first player have the 出牌
                             mainFrame.showChuPaiJButton();
@@ -78,7 +79,6 @@ public class ReceiveThread extends Thread {
                     int typeId = msgJSONObject.getInteger("typeId");
                     int playerId = msgJSONObject.getInteger("playerId");
                     String playerUname = msgJSONObject.getString("playerUname");
-                    String contentString = msgJSONObject.getString("contentString");
                     if (typeId == 3) {
                         // 不出牌消息
                         mainFrame.showMsg(typeId, playerUname);
@@ -89,6 +89,7 @@ public class ReceiveThread extends Thread {
 
                     } else if (typeId == 4) {
                         // 出牌, get the outPokerList
+                        mainFrame.msgLabel.setVisible(false);
                         List<Poker> outPokerList = getPokerListFromJSON(msgJSONObject);
                         mainFrame.showOutPokerList(outPokerList);
                         // 判断现在是不是自己出牌
@@ -98,7 +99,6 @@ public class ReceiveThread extends Thread {
                         mainFrame.prevPlayerId = playerId;
                     }
                 }
-                mainFrame.addClickEventToPoker();
 
             }
         } catch (IOException e) {
