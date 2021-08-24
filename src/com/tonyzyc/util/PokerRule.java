@@ -59,7 +59,6 @@ public class PokerRule {
     private static boolean isDanShun(List<PokerLabel> list) {
         int num = list.get(0).getNum();
         for (PokerLabel p: list) {
-            System.out.println(p.getName() + " " + p.getNum());
             int curNum = p.getNum();
             if (curNum != num || curNum >= 15) {
                 return false;
@@ -151,7 +150,7 @@ public class PokerRule {
                     return cur.size() > prev.size();
                 } else {
                     if (!prev.get(0).isHun() && !cur.get(0).isHun()) {
-                        return prev.get(0).getNum() > cur.get(0).getNum();
+                        return cur.get(0).getNum() > prev.get(0).getNum();
                     } else if (prev.get(0).isHun() && cur.get(0).isHun()) {
                         return false;
                     } else {
@@ -199,5 +198,15 @@ public class PokerRule {
             return false;
         }
         return prev.get(0).getNum() == cur.get(0).getNum() && prev.get(0).getNum() == cur.get(1).getNum();
+    }
+
+    public static boolean isGou(List<PokerLabel> prev, List<PokerLabel> cur) throws Exception {
+        if (prev.size() != 2) {
+            throw new Exception("Cannot 勾 here!");
+        }
+        if (cur.size() != 1) {
+            return false;
+        }
+        return prev.get(0).getNum() == cur.get(0).getNum() && prev.get(1).getNum() == cur.get(0).getNum();
     }
 }

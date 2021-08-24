@@ -59,23 +59,23 @@ public class Poker {
     public Poker() {
     }
 
-    public Poker(int id, String name, String color, int num) {
+    public Poker(int id, String name, String color, int num, boolean isHun) {
         this.id = id;
         this.name = name;
         this.color = color;
         this.num = num;
         // default set poker 3 to be the hun
-        this.isHun = name.split(" ")[1].equals("3");
+        this.isHun = isHun;
     }
 
-    public Poker(int id, String name, String color, int num, boolean isOut) {
+    public Poker(int id, String name, String color, int num, boolean isOut, boolean isHun) {
         this.id = id;
         this.name = name;
         this.color = color;
         this.num = num;
         this.isOut = isOut;
         // default set poker 3 to be the hun
-        this.isHun = name.split(" ")[1].equals("3");
+        this.isHun = isHun;
     }
 
     @Override

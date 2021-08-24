@@ -52,8 +52,6 @@ public class MainFrame extends JFrame {
     public List<PokerLabel> showOutPokerLabels = new ArrayList<>();
     // check if the current player 是否出牌
     public boolean isOut;
-    // check if current player 正在叉
-    public boolean isCha;
     // last player who 出牌
     public int prevPlayerId = -1;
 
@@ -158,7 +156,7 @@ public class MainFrame extends JFrame {
             GameUtil.move(pokerLabel, 180 + 30 * i, 450, true);
         }
 
-        Collections.sort(pokerLabels);
+        Collections.sort(pokerLabels, Collections.reverseOrder());
 
         for (int i = 0; i < pokerLabels.size(); i++) {
             this.myPanel.setComponentZOrder(pokerLabels.get(i), 0);
@@ -184,9 +182,9 @@ public class MainFrame extends JFrame {
     }
 
     // 显示出牌按钮和不出牌以及倒计时
-    public void showChuPaiJButton() {
+    public void showChuPaiJButton(boolean isFirst) {
         chuPaiJButton.setVisible(true);
-        buChuJButton.setVisible(true);
+        buChuJButton.setVisible(!isFirst);
         timeLabel.setVisible(true);
         this.repaint();
         // start 出牌定时器
@@ -206,14 +204,15 @@ public class MainFrame extends JFrame {
 
     // display 出牌, 不出牌message
     public void showMsg(int typeId, String msg) {
-        System.out.println(uname + " show message: " + typeId + " " + msg);
         msgLabel.setBounds(650, 250, 200, 80);
         if (typeId == 3) {
             msgLabel.setText(msg + " 不出");
         } else if (typeId == 5) {
             msgLabel.setText(msg + " 叉");
+            System.out.println(uname + " show message: " + msg + " 叉");
         } else if (typeId == 6) {
             msgLabel.setText(msg + " 勾");
+            System.out.println(uname + " show message: " + msg + " 勾");
         }
         msgLabel.setFont(new Font("Dialog", 0, 20));
         msgLabel.setVisible(true);
@@ -239,7 +238,7 @@ public class MainFrame extends JFrame {
     }
 
     // remove out poker from current player's poker list
-    public void removeOutPokerFromPokerList() {
+    public void removeOutPokerFromPokerList(int typeId) {
         // 1. remove from current poker list
         pokerLabels.removeAll(selectedPokerLabels);
         // 2. remove from label
@@ -253,7 +252,9 @@ public class MainFrame extends JFrame {
         }
         // clear selected poker list
         selectedPokerLabels.clear();
-        msgLabel.setVisible(false);
+        if (typeId != 5 && typeId != 6) {
+            msgLabel.setVisible(false);
+        }
         this.repaint();
     }
 
@@ -269,7 +270,7 @@ public class MainFrame extends JFrame {
     public List<Poker> changePokerLabelToPoker(List<PokerLabel> pokerLabelList) {
         List<Poker> list = new ArrayList<>();
         for (PokerLabel pokerLabel: pokerLabelList) {
-            Poker poker = new Poker(pokerLabel.getId(), pokerLabel.getName(), pokerLabel.getColor(), pokerLabel.getNum());
+            Poker poker = new Poker(pokerLabel.getId(), pokerLabel.getName(), pokerLabel.getColor(), pokerLabel.getNum(), pokerLabel.isHun());
             list.add(poker);
         }
         return list;
@@ -322,7 +323,7 @@ public class MainFrame extends JFrame {
                         chaJButton.setVisible(false);
                         // send message to server
                         Message msg = new Message(5, currentPlayer.getId(), uname, "叉", changePokerLabelToPoker(selectedPokerLabels));
-                        removeOutPokerFromPokerList();
+                        removeOutPokerFromPokerList(5);
                         String msgJSONString = JSON.toJSONString(msg);
                         sendThread.setMsg(msgJSONString);
                     } else {
@@ -332,7 +333,21 @@ public class MainFrame extends JFrame {
                     ex.printStackTrace();
                 }
             } else if (e.getSource().equals(gouJButton)) {
-                System.out.println("Click 勾");
+                try {
+                    if (PokerRule.isGou(showOutPokerLabels, selectedPokerLabels)) {
+                        isOut = true;
+                        gouJButton.setVisible(false);
+                        // send message to server
+                        Message msg = new Message(6, currentPlayer.getId(), uname, "勾", changePokerLabelToPoker(selectedPokerLabels));
+                        removeOutPokerFromPokerList(6);
+                        String msgJSONString = JSON.toJSONString(msg);
+                        sendThread.setMsg(msgJSONString);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "请按规则出牌");
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
         }
 

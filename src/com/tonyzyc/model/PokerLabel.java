@@ -145,17 +145,9 @@ public class PokerLabel extends JLabel implements Comparable {
             if (!this.isHun && !other.isHun) {
                 return this.num - other.num;
             } else if (this.isHun) {
-                if (other.num >= 16) {
-                    return -1;
-                } else {
-                    return 1;
-                }
+                return other.num >= 16 ? -1 : 1;
             } else {
-                if (this.num >= 16) {
-                    return 1;
-                } else {
-                    return -1;
-                }
+                return this.num < 16 ? -1 : 1;
             }
         } else {
             return suitMap.get(this.name.split(" ")[0]) - suitMap.get(other.name.split(" ")[0]);

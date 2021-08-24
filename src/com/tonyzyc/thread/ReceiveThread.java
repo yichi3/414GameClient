@@ -1,12 +1,12 @@
 package com.tonyzyc.thread;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import com.tonyzyc.model.Player;
 import com.tonyzyc.model.Poker;
 import com.tonyzyc.model.PokerLabel;
-import com.tonyzyc.util.PokerRule;
-import com.tonyzyc.util.PokerType;
 import com.tonyzyc.view.MainFrame;
 
 import java.io.DataInputStream;
@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ReceiveThread extends Thread {
     private Socket socket;
@@ -37,7 +38,8 @@ public class ReceiveThread extends Thread {
             String pokerName = pokerJSONObject.getString("name");
             String pokerColor = pokerJSONObject.getString("color");
             int pokerNum = pokerJSONObject.getInteger("num");
-            Poker poker = new Poker(pokerId, pokerName, pokerColor, pokerNum);
+            boolean isHun = pokerJSONObject.getBoolean("hun");
+            Poker poker = new Poker(pokerId, pokerName, pokerColor, pokerNum, isHun);
             list.add(poker);
         }
         return list;
@@ -54,6 +56,39 @@ public class ReceiveThread extends Thread {
         return list;
     }
 
+    private void checkCha(int playerId, List<Poker> outPokerList) {
+        if (playerId != mainFrame.currentPlayer.getId() && outPokerList.size() == 1 && outPokerList.get(0).getNum() <= 15) {
+            // 叉!
+            int num = outPokerList.get(0).getNum();
+            int count = 0;
+            for (PokerLabel p: mainFrame.pokerLabels) {
+                if (p.getNum() == num) {
+                    count++;
+                }
+                if (count >= 2) {
+                    mainFrame.showChaJButton();
+                    break;
+                }
+            }
+        }
+    }
+
+    private void checkGou(List<Poker> outPokerList) {
+        int num = outPokerList.get(0).getNum();
+        for (PokerLabel p: mainFrame.pokerLabels) {
+            if (p.getNum() == num) {
+                mainFrame.showGouJButton();
+                break;
+            }
+        }
+    }
+
+    private static <K, V> Map<K, V> parseToMap(String json) {
+        return JSON.parseObject(json,
+                new TypeReference<>(Integer.class, Player.class) {
+                });
+    }
+
     public void run() {
         try {
             DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
@@ -62,16 +97,10 @@ public class ReceiveThread extends Thread {
                 // first step , get all players' information
                 if (step == 0) {
                     List<Player> players = new ArrayList<>();
-                    JSONArray playersJSONArray = JSONArray.parseArray(jsonString);
-                    for (int i = 0; i < playersJSONArray.size(); i++) {
+                    Map<Integer, Player> playerMap = parseToMap(jsonString);
+                    for (int i = 0; i < playerMap.size(); i++) {
                         // get every player json object
-                        JSONObject playerJSONObject = (JSONObject) playersJSONArray.get(i);
-                        int playerId = playerJSONObject.getInteger("id");
-                        String playerUname = playerJSONObject.getString("playerUname");
-                        boolean isFirst = playerJSONObject.getBoolean("first");
-                        // store the poker list for each player
-                        List<Poker> pokers = getPokerListFromJSON(playerJSONObject);
-                        Player player = new Player(playerId, playerUname, pokers, isFirst);
+                        Player player = playerMap.get(i);
                         players.add(player);
                     }
                     // if you get all players' info, display the info on the screen
@@ -83,9 +112,7 @@ public class ReceiveThread extends Thread {
                         mainFrame.addClickEventToPoker();
                         if (mainFrame.currentPlayer.isFirst()) {
                             // first player have the 出牌
-                            mainFrame.showChuPaiJButton(
-
-                            );
+                            mainFrame.showChuPaiJButton(true);
                         }
                     }
                 } else if (step == 1) {
@@ -102,9 +129,8 @@ public class ReceiveThread extends Thread {
                         mainFrame.gouJButton.setVisible(false);
                         // 判断现在是不是自己出牌
                         if ((playerId + 1) % mainFrame.numOfPlayers == mainFrame.currentPlayer.getId()) {
-                            mainFrame.showChuPaiJButton();
+                            mainFrame.showChuPaiJButton(mainFrame.currentPlayer.getId() == mainFrame.prevPlayerId);
                         }
-
                     } else if (typeId == 4) {
                         // 出牌, get the outPokerList
                         mainFrame.msgLabel.setVisible(false);
@@ -113,25 +139,12 @@ public class ReceiveThread extends Thread {
                         mainFrame.gouJButton.setVisible(false);
                         List<Poker> outPokerList = getPokerListFromJSON(msgJSONObject);
                         mainFrame.showOutPokerList(outPokerList);
+                        mainFrame.prevPlayerId = playerId;
                         // 判断现在是不是自己出牌
                         if ((playerId + 1) % mainFrame.numOfPlayers == mainFrame.currentPlayer.getId()) {
-                            mainFrame.showChuPaiJButton();
+                            mainFrame.showChuPaiJButton(mainFrame.currentPlayer.getId() == mainFrame.prevPlayerId);
                         }
-                        if (playerId != mainFrame.currentPlayer.getId() && outPokerList.size() == 1 && outPokerList.get(0).getNum() <= 15) {
-                            // 叉!
-                            int num = outPokerList.get(0).getNum();
-                            int count = 0;
-                            for (PokerLabel p: mainFrame.pokerLabels) {
-                                if (p.getNum() == num) {
-                                    count++;
-                                }
-                                if (count >= 2) {
-                                    mainFrame.showChaJButton();
-                                    break;
-                                }
-                            }
-                        }
-                        mainFrame.prevPlayerId = playerId;
+                        checkCha(playerId, outPokerList);
                     } else if (typeId == 5) {
                         // someone 叉
                         mainFrame.chuPaiCountThread.setCha(true);
@@ -139,22 +152,31 @@ public class ReceiveThread extends Thread {
                         mainFrame.showMsg(typeId, playerUname);
                         List<Poker> outPokerList = getPokerListFromJSON(msgJSONObject);
                         mainFrame.showOutPokerList(outPokerList);
+                        mainFrame.prevPlayerId = playerId;
                         // check if current player 叉
-                        System.out.println("playerId: " + playerId + " currentPlayer: " + mainFrame.currentPlayer.getId());
                         if (playerId == mainFrame.currentPlayer.getId()) {
-                            mainFrame.showChuPaiJButton();
+                            mainFrame.showChuPaiJButton(mainFrame.currentPlayer.getId() == mainFrame.prevPlayerId);
                         } else {
                             mainFrame.chaJButton.setVisible(false);
                             // check if other player want to 勾
-                            int num = outPokerList.get(0).getNum();
-                            for (PokerLabel p: mainFrame.pokerLabels) {
-                                if (p.getNum() == num) {
-                                    mainFrame.showGouJButton();
-                                    break;
-                                }
-                            }
+                            checkGou(outPokerList);
                         }
+                    } else if (typeId == 6) {
+                        // someone 勾
+                        mainFrame.chuPaiCountThread.setGou(true);
+                        mainFrame.chuPaiCountThread.setGouPlayerId(playerId);
+                        mainFrame.showMsg(typeId, playerUname);
+                        List<Poker> outPokerList = getPokerListFromJSON(msgJSONObject);
+                        mainFrame.showOutPokerList(outPokerList);
                         mainFrame.prevPlayerId = playerId;
+                        // check if current player 勾
+                        if (playerId == mainFrame.currentPlayer.getId()) {
+                            mainFrame.showChuPaiJButton(mainFrame.currentPlayer.getId() == mainFrame.prevPlayerId);
+                        } else {
+                            mainFrame.gouJButton.setVisible(false);
+                            // check if other player want to 叉
+                            checkCha(playerId, outPokerList);
+                        }
                     }
                 }
 
