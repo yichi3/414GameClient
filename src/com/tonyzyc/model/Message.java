@@ -5,6 +5,20 @@ import java.util.List;
 
 public class Message implements Serializable {
     // message type
+    /*
+    Message typeId:
+    3: 不出牌
+    4: 出牌
+    5: 叉牌
+    6: 勾牌
+    7: 设定第一人出牌
+    10: 有人出完
+    100: 游戏结束
+    11: 有人上供
+    12: 有人回供
+    13: 取消上供/回供
+
+     */
     private int typeId;
     private int playerId;
     private String playerUname;

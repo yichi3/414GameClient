@@ -3,7 +3,6 @@ package com.tonyzyc.util;
 import com.tonyzyc.model.PokerLabel;
 
 public class GameUtil {
-    public static final int numOfPlayers = 4;
     public static void move(PokerLabel pokerLabel, int x, int y, boolean isAnimated) {
         pokerLabel.setLocation(x, y);
         try {

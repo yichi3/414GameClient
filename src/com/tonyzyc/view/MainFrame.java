@@ -17,8 +17,7 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 
 public class MainFrame extends JFrame {
@@ -38,6 +37,12 @@ public class MainFrame extends JFrame {
     public JButton gouJButton;
     public JLabel timeLabel;
     public JLabel msgLabel;
+    public JTextField hunJTextField;
+    public JButton hunSubmitJButton;
+    public JButton firstPlayerJButton;
+    public JButton shangGongJButton;
+    public JButton huiGongJButton;
+    public JButton cancelGongJButton;
     // store the current poker label list
     public List<PokerLabel> pokerLabels = new ArrayList<>();
 
@@ -54,6 +59,7 @@ public class MainFrame extends JFrame {
     public boolean isOut;
     // last player who 出牌
     public int prevPlayerId = -1;
+    public Set<Integer> donePlayerIds = new HashSet<>();
 
     public MainFrame(String uname, Socket socket, int numOfPlayers) {
         System.out.println("this is user " + uname);
@@ -85,6 +91,19 @@ public class MainFrame extends JFrame {
     }
 
     private void init() {
+        // set hun number
+        hunJTextField = new JTextField();
+        hunJTextField.setBounds(330, 350, 100, 40);
+        hunJTextField.setVisible(false);
+        this.myPanel.add(hunJTextField);
+
+        hunSubmitJButton = new JButton("提交\"混\"");
+        hunSubmitJButton.setBounds(440, 350, 100, 40);
+        hunSubmitJButton.setFont(new Font("Dialog", 1, 20));
+        hunSubmitJButton.addMouseListener(new MyMouseEvent());
+        hunSubmitJButton.setVisible(false);
+        this.myPanel.add(hunSubmitJButton);
+
         // init 出牌，不出，计时器
         chuPaiJButton = new JButton("出牌");
         chuPaiJButton.setBounds(330, 350, 100, 40);
@@ -124,6 +143,34 @@ public class MainFrame extends JFrame {
         msgLabel = new JLabel();
         msgLabel.setVisible(false);
         this.myPanel.add(msgLabel);
+
+        firstPlayerJButton = new JButton("先出");
+        firstPlayerJButton.setBounds(330, 350, 100, 40);
+        firstPlayerJButton.setFont(new Font("Dialog", 1, 20));
+        firstPlayerJButton.addMouseListener(new MyMouseEvent());
+        firstPlayerJButton.setVisible(false);
+        this.myPanel.add(firstPlayerJButton);
+
+        shangGongJButton = new JButton("上供");
+        shangGongJButton.setBounds(330, 350, 100, 40);
+        shangGongJButton.setFont(new Font("Dialog", 1, 20));
+        shangGongJButton.addMouseListener(new MyMouseEvent());
+        shangGongJButton.setVisible(false);
+        this.myPanel.add(shangGongJButton);
+
+        huiGongJButton = new JButton("下供");
+        huiGongJButton.setBounds(440, 350, 100, 40);
+        huiGongJButton.setFont(new Font("Dialog", 1, 20));
+        huiGongJButton.addMouseListener(new MyMouseEvent());
+        huiGongJButton.setVisible(false);
+        this.myPanel.add(huiGongJButton);
+
+        cancelGongJButton = new JButton("取消");
+        cancelGongJButton.setBounds(550, 350, 100, 40);
+        cancelGongJButton.setFont(new Font("Dialog", 1, 20));
+        cancelGongJButton.addMouseListener(new MyMouseEvent());
+        cancelGongJButton.setVisible(false);
+        this.myPanel.add(cancelGongJButton);
     }
 
     private void getReady() {
@@ -202,9 +249,17 @@ public class MainFrame extends JFrame {
         this.repaint();
     }
 
+    public boolean isNextPlayer(int playerId) {
+        // check if current player is the next player
+        while (donePlayerIds.contains((playerId + 1) % numOfPlayers)) {
+            playerId++;
+        }
+        return (playerId + 1) % numOfPlayers == currentPlayer.getId();
+    }
+
     // display 出牌, 不出牌message
     public void showMsg(int typeId, String msg) {
-        msgLabel.setBounds(650, 250, 200, 80);
+        msgLabel.setBounds(650, 100, 200, 80);
         if (typeId == 3) {
             msgLabel.setText(msg + " 不出");
         } else if (typeId == 5) {
@@ -213,6 +268,8 @@ public class MainFrame extends JFrame {
         } else if (typeId == 6) {
             msgLabel.setText(msg + " 勾");
             System.out.println(uname + " show message: " + msg + " 勾");
+        } else if (typeId == 10) {
+            msgLabel.setText(msg + "出完牌了!");
         }
         msgLabel.setFont(new Font("Dialog", 0, 20));
         msgLabel.setVisible(true);
@@ -276,6 +333,35 @@ public class MainFrame extends JFrame {
         return list;
     }
 
+    public void sendMsgToServer(Message msg) {
+        String msgJSONString = JSON.toJSONString(msg);
+        sendThread.setMsg(msgJSONString);
+    }
+
+    public void resetGame() {
+        // reset the game
+        readyJButton.setVisible(true);
+        readyJButton.setText("Ready");
+        isReady = false;
+        msgLabel.setVisible(false);
+        chuPaiJButton.setVisible(false);
+        buChuJButton.setVisible(false);
+        chaJButton.setVisible(false);
+        gouJButton.setVisible(false);
+        timeLabel.setVisible(false);
+        hunJTextField.setVisible(false);
+        hunSubmitJButton.setVisible(false);
+        shangGongJButton.setVisible(false);
+        huiGongJButton.setVisible(false);
+        cancelGongJButton.setVisible(false);
+        pokerLabels.clear();
+        chuPaiCountThread = new ChuPaiCountThread(100, this);
+        selectedPokerLabels.clear();
+        isOut = false;
+        prevPlayerId = -1;
+        donePlayerIds.clear();
+    }
+
     class MyMouseEvent implements MouseListener {
         @Override
         public void mouseClicked(MouseEvent e) {
@@ -285,29 +371,41 @@ public class MainFrame extends JFrame {
                 readyJButton.setText("Waiting for other players");
                 readyJButton.setBounds(500, 400, 200, 40);
                 readyJButton.setFont(new Font("Dialog", 0, 15));
-                // currently, player does not know his playerId, use 0 here
-                Message msg = new Message(1, 0, uname, "Ready", null);
-                sendThread.setMsg(JSON.toJSONString(msg));
+                // remove all pokers from last match
+                for (PokerLabel p: showOutPokerLabels) {
+                    myPanel.remove(p);
+                }
+                repaint();
+                showOutPokerLabels.clear();
+                // currently, player does not know his playerId, use -1 if first initialize
+                int playerId = currentPlayer == null ? -1 : currentPlayer.getId();
+                sendMsgToServer(new Message(1, playerId, uname, numOfPlayers+"", null));
             } else if (e.getSource().equals(chuPaiJButton)) {
                 // need to check if the out poker is valid
-                PokerType pokerType = PokerRule.checkPokerType(selectedPokerLabels);
-                if (!pokerType.equals(PokerType.p_error)) {
-                    if (prevPlayerId == -1 || prevPlayerId == currentPlayer.getId() || PokerRule.isBigger(showOutPokerLabels, selectedPokerLabels)) {
-                        // stop the counter
-                        isOut = true;
-                        chuPaiCountThread.setRun(false);
-                        chuPaiJButton.setVisible(false);
-                        buChuJButton.setVisible(false);
-                        timeLabel.setVisible(false);
-                        chaJButton.setVisible(false);
-                        gouJButton.setVisible(false);
-                    } else {
-                        JOptionPane.showMessageDialog(null, "请按规则出牌");
-                    }
-                } else {
-                    JOptionPane.showMessageDialog(null, "不符合牌型");
-                }
-
+//                PokerType pokerType = PokerRule.checkPokerType(selectedPokerLabels);
+//                if (!pokerType.equals(PokerType.p_error)) {
+//                    if (prevPlayerId == -1 || prevPlayerId == currentPlayer.getId() || PokerRule.isBigger(showOutPokerLabels, selectedPokerLabels)) {
+//                        // stop the counter
+//                        isOut = true;
+//                        chuPaiCountThread.setRun(false);
+//                        chuPaiJButton.setVisible(false);
+//                        buChuJButton.setVisible(false);
+//                        timeLabel.setVisible(false);
+//                        chaJButton.setVisible(false);
+//                        gouJButton.setVisible(false);
+//                    } else {
+//                        JOptionPane.showMessageDialog(null, "请按规则出牌");
+//                    }
+//                } else {
+//                    JOptionPane.showMessageDialog(null, "不符合牌型");
+//                }
+                isOut = true;
+                chuPaiCountThread.setRun(false);
+                chuPaiJButton.setVisible(false);
+                buChuJButton.setVisible(false);
+                timeLabel.setVisible(false);
+                chaJButton.setVisible(false);
+                gouJButton.setVisible(false);
             } else if (e.getSource().equals(buChuJButton)) {
                 isOut = false;
                 chuPaiCountThread.setRun(false);
@@ -323,9 +421,8 @@ public class MainFrame extends JFrame {
                         chaJButton.setVisible(false);
                         // send message to server
                         Message msg = new Message(5, currentPlayer.getId(), uname, "叉", changePokerLabelToPoker(selectedPokerLabels));
+                        sendMsgToServer(msg);
                         removeOutPokerFromPokerList(5);
-                        String msgJSONString = JSON.toJSONString(msg);
-                        sendThread.setMsg(msgJSONString);
                     } else {
                         JOptionPane.showMessageDialog(null, "请按规则出牌");
                     }
@@ -339,15 +436,69 @@ public class MainFrame extends JFrame {
                         gouJButton.setVisible(false);
                         // send message to server
                         Message msg = new Message(6, currentPlayer.getId(), uname, "勾", changePokerLabelToPoker(selectedPokerLabels));
+                        sendMsgToServer(msg);
                         removeOutPokerFromPokerList(6);
-                        String msgJSONString = JSON.toJSONString(msg);
-                        sendThread.setMsg(msgJSONString);
                     } else {
                         JOptionPane.showMessageDialog(null, "请按规则出牌");
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
+            } else if (e.getSource().equals(hunSubmitJButton)) {
+                // first check if user type in correct keyword
+                String hun = hunJTextField.getText();
+                if (hun.length() != 1 && !hun.equals("10")) {
+                    JOptionPane.showMessageDialog(null, "请输入正确\"混\"(A, 2, ..., K)");
+                } else {
+                    char c = hun.charAt(0);
+                    if (c >= '2' && c <= '9' || c == 'J' || c == 'Q' || c == 'K' || c == 'A' || hun.equals("10")) {
+                        hunJTextField.setText("");
+                        hunJTextField.setVisible(false);
+                        hunSubmitJButton.setVisible(false);
+                        sendMsgToServer(new Message(9, 0, uname, hun, null));
+                    } else {
+                        JOptionPane.showMessageDialog(null, "请输入正确\"混\"(A, 2, ..., K)");
+                    }
+                }
+            } else if (e.getSource().equals(shangGongJButton)) {
+                if (selectedPokerLabels.size() != 1) {
+                    JOptionPane.showMessageDialog(null, "只需要上供一张牌");
+                } else {
+                    if (selectedPokerLabels.get(0).getNum() != pokerLabels.get(0).getNum()) {
+                        JOptionPane.showMessageDialog(null, "必须上供最大的牌");
+                    } else {
+                        shangGongJButton.setVisible(false);
+                        cancelGongJButton.setVisible(false);
+                        sendMsgToServer(new Message(11, currentPlayer.getId(), uname, "上供", changePokerLabelToPoker(selectedPokerLabels)));
+                    }
+                }
+            } else if (e.getSource().equals(huiGongJButton)) {
+                if (selectedPokerLabels.size() != 1) {
+                    JOptionPane.showMessageDialog(null, "只需要回供一张牌");
+                } else {
+                    huiGongJButton.setVisible(false);
+                    cancelGongJButton.setVisible(false);
+                    sendMsgToServer(new Message(12, currentPlayer.getId(), uname, "上供", changePokerLabelToPoker(selectedPokerLabels)));
+                }
+            } else if (e.getSource().equals(cancelGongJButton)) {
+                shangGongJButton.setVisible(false);
+                huiGongJButton.setVisible(false);
+                cancelGongJButton.setVisible(false);
+                sendMsgToServer(new Message(13, currentPlayer.getId(), uname, "取消上供/回供", new ArrayList<>()));
+            } else if (e.getSource().equals(firstPlayerJButton)) {
+                firstPlayerJButton.setVisible(false);
+                sendMsgToServer(new Message(7, currentPlayer.getId(), uname, "第一人出牌", null));
+            }
+        }
+
+        private void sendDoneMsg(Message msg) throws InterruptedException {
+            String msgJSONString = JSON.toJSONString(msg);
+            sendThread.setMsg(msgJSONString);
+            if (pokerLabels.size() == 0) {
+                Thread.sleep(1000);
+                msg = new Message(10, currentPlayer.getId(), uname, "", new ArrayList<>());
+                msgJSONString = JSON.toJSONString(msg);
+                sendThread.setMsg(msgJSONString);
             }
         }
 

@@ -4,7 +4,6 @@ import com.tonyzyc.util.GameUtil;
 
 public class Main {
     public static void main(String[] args) {
-        int numOfPlayers = GameUtil.numOfPlayers;
-        new Login(numOfPlayers);
+        new Login();
     }
 }

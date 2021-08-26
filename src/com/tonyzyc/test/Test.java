@@ -2,6 +2,7 @@ package com.tonyzyc.test;
 
 import com.tonyzyc.model.Poker;
 import com.tonyzyc.model.PokerLabel;
+import com.tonyzyc.thread.ReceiveThread;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,7 +11,7 @@ import java.util.List;
 public class Test {
     public static void main(String[] args) {
         List<Poker> allPokers = createPokers(3);
-        List<PokerLabel> labels = changePokerToPokerLabel(allPokers);
+        List<PokerLabel> labels = new ReceiveThread().getPokerLabelFromPoker(allPokers);
 //        List<PokerLabel> labels = new ArrayList<>();
 //        labels.add(new PokerLabel(30, "Clubs 4", "Black", 4, false));
 //        labels.add(new PokerLabel(16, "Hearts 3", "Red", 3, true));
@@ -43,14 +44,5 @@ public class Test {
         }
         Collections.shuffle(allPokers);
         return allPokers;
-    }
-
-    public static List<PokerLabel> changePokerToPokerLabel(List<Poker> pokerList) {
-        List<PokerLabel> list = new ArrayList<>();
-        for (Poker p: pokerList) {
-            PokerLabel pokerLabel = new PokerLabel(p.getId(), p.getName(), p.getColor(), p.getNum(), p.isHun());
-            list.add(pokerLabel);
-        }
-        return list;
     }
 }

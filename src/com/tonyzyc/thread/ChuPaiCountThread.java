@@ -92,7 +92,7 @@ public class ChuPaiCountThread extends Thread {
             } else {
                 msg = new Message(4, mainFrame.currentPlayer.getId(), mainFrame.currentPlayer.getPlayerUname(), "出牌", mainFrame.changePokerLabelToPoker(mainFrame.selectedPokerLabels));
                 // remove outPoker from my deck
-                mainFrame.removeOutPokerFromPokerList(1);
+                mainFrame.removeOutPokerFromPokerList(4);
             }
             String msgJSONString = JSON.toJSONString(msg);
             mainFrame.sendThread.setMsg(msgJSONString);
