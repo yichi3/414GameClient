@@ -11,12 +11,14 @@ public class Message implements Serializable {
     4: 出牌
     5: 叉牌
     6: 勾牌
-    7: 设定第一人出牌
+    7: 设定出牌
+    9: 设定混
     10: 有人出完
     100: 游戏结束
     11: 有人上供
     12: 有人回供
-    13: 取消上供/回供
+    13: 取消上供/回供/选供
+    14: 有人选供
 
      */
     private int typeId;

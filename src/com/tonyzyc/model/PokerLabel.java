@@ -98,6 +98,22 @@ public class PokerLabel extends JLabel implements Comparable {
         this.setSize(105, 150);
     }
 
+    public PokerLabel(PokerLabel other) {
+        this.id = other.id;
+        this.name = other.name;
+        this.color = other.color;
+        this.num = other.num;
+        this.isHun = other.isHun;
+        this.isOut = other.isOut;
+        this.isUp = other.isUp;
+        if (isUp) {
+            turnUp();
+        } else {
+            turnDown();
+        }
+        this.setSize(105, 150);
+    }
+
     public PokerLabel(int id, String name, String color, int num, boolean isHun) {
         this.id = id;
         this.name = name;

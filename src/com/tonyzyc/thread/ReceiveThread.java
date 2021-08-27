@@ -21,6 +21,7 @@ public class ReceiveThread extends Thread {
     private Socket socket;
     private MainFrame mainFrame;
     private int numOfPlayers;
+    private int gongCount = 0;
 
     private GameState step = GameState.Start;
 
@@ -84,6 +85,41 @@ public class ReceiveThread extends Thread {
         }
     }
 
+    private void checkOverChaGou(List<Poker> outPokerList, String content) {
+        int lowerCount = Integer.parseInt(content), count = 0;
+        int num = outPokerList.get(0).getNum();
+        boolean flag = false;
+        for (PokerLabel p: mainFrame.pokerLabels) {
+            if (p.getNum() == num) {
+                count++;
+            }
+            if (count > lowerCount) {
+                flag = true;
+                break;
+            }
+        }
+        if (flag || contain414()) {
+            mainFrame.lowerCount = lowerCount;
+            mainFrame.guanShangJButton.setVisible(true);
+        }
+    }
+
+    private boolean contain414() {
+        boolean one4 = false, two4 = false, oneA = false;
+        for (PokerLabel p: mainFrame.pokerLabels) {
+            if (p.getNum() == 4) {
+                if (one4) {
+                    two4 = true;
+                } else {
+                    one4 = true;
+                }
+            } else if (p.getNum() == 14) {
+                oneA = true;
+            }
+        }
+        return two4 && oneA;
+    }
+
     private static <K, V> Map<K, V> parseToMap(String json) {
         return JSON.parseObject(json,
                 new TypeReference<>(Integer.class, Player.class) {
@@ -116,37 +152,77 @@ public class ReceiveThread extends Thread {
                     if (players.size() == numOfPlayers) {
                         mainFrame.readyJButton.setVisible(false);
                         mainFrame.showAllPlayersInfo(players);
-                        // all players have arrived, get to the second step
-                        step = GameState.SetFirstPlayer;
+                        // all players have arrived, decide Shanggong
+                        // TODO: move the following two lines to the end of huiGong
+//                        step = GameState.SetFirstPlayer;
+//                        mainFrame.firstPlayerJButton.setVisible(true);
                         mainFrame.addClickEventToPoker();
-                        mainFrame.firstPlayerJButton.setVisible(true);
-                        // TODO: move this step later
-//                        if (mainFrame.currentPlayer.isFirst()) {
-//                            // first player have the 出牌
-//                            mainFrame.showChuPaiJButton(true);
-//                        }
+                        step = GameState.ShangGong;
+                        mainFrame.shangGongJButton.setVisible(true);
+                        mainFrame.cancelGongJButton.setVisible(true);
                     }
                 } else if (step == GameState.ShangGong) {
-                    // all players need to decide whether he needs to shanggong or huigong
-                    System.out.println("上供");
-                    mainFrame.shangGongJButton.setVisible(true);
-                    mainFrame.cancelGongJButton.setVisible(true);
-                    step = GameState.PickShangGong;
-                } else if (step == GameState.PickShangGong) {
                     JSONObject msgJSONObject = JSONObject.parseObject(jsonString);
+                    // first display all gong
+                    System.out.println("get all Gong from server");
                     List<Poker> outPokerList = getPokerListFromJSON(msgJSONObject);
                     if (outPokerList.size() != 0) {
+                        step = GameState.PickShangGong;
                         mainFrame.showOutPokerList(outPokerList);
+                        mainFrame.addClickEventToGong();
+                        mainFrame.selectGongJButton.setVisible(true);
+                        mainFrame.cancelGongJButton.setVisible(true);
+                    } else {
+                        // nobody shanggong, choose the start player and start the game
+                        step = GameState.SetFirstPlayer;
+                        mainFrame.firstPlayerJButton.setVisible(true);
                     }
-
-                    step = GameState.HuiGong;
+                } else if (step == GameState.PickShangGong) {
+                    // if someone submit gong, others need to pick the card from list
+                    // show receive numOfPlayers message
+                    System.out.println("选供");
+                    gongCount++;
+                    JSONObject msgJSONObject = JSONObject.parseObject(jsonString);
+                    int typeId = msgJSONObject.getInteger("typeId");
+                    if (typeId == 14) {
+                        List<Poker> pickedGongPoker = getPokerListFromJSON(msgJSONObject);
+                        // now we need to remove the gong from the showOutPokerLabels
+                        mainFrame.showOutGongList(pickedGongPoker);
+                    }
+                    if (gongCount == numOfPlayers) {
+                        step = GameState.HuiGong;
+                        gongCount = 0;
+                        mainFrame.huiGongJButton.setVisible(true);
+                        mainFrame.cancelGongJButton.setVisible(true);
+                    }
                 } else if (step == GameState.HuiGong) {
-                    mainFrame.huiGongJButton.setVisible(true);
-                    mainFrame.cancelGongJButton.setVisible(true);
+                    JSONObject msgJSONObject = JSONObject.parseObject(jsonString);
+                    // first display all gong
+                    System.out.println("get all hui Gong from server");
+                    List<Poker> outPokerList = getPokerListFromJSON(msgJSONObject);
+                    if (outPokerList.size() == 0) {
+                        throw new Exception("Must 回供");
+                    }
                     step = GameState.PickHuiGong;
+                    mainFrame.showOutPokerList(outPokerList);
+                    mainFrame.addClickEventToGong();
+                    mainFrame.selectGongJButton.setVisible(true);
+                    mainFrame.cancelGongJButton.setVisible(true);
                 } else if (step == GameState.PickHuiGong) {
-
-                    step = GameState.Playing;
+                    System.out.println("选回供");
+                    gongCount++;
+                    JSONObject msgJSONObject = JSONObject.parseObject(jsonString);
+                    int typeId = msgJSONObject.getInteger("typeId");
+                    if (typeId == 14) {
+                        List<Poker> pickedGongPoker = getPokerListFromJSON(msgJSONObject);
+                        // now we need to remove the gong from the showOutPokerLabels
+                        mainFrame.showOutGongList(pickedGongPoker);
+                    }
+                    if (gongCount == numOfPlayers) {
+                        step = GameState.SetFirstPlayer;
+                        gongCount = 0;
+                        mainFrame.firstPlayerJButton.setVisible(true);
+                    }
                 } else if (step.equals(GameState.SetFirstPlayer)) {
                     JSONObject msgJSONObject = JSONObject.parseObject(jsonString);
                     int playerId = msgJSONObject.getInteger("playerId");
@@ -167,6 +243,7 @@ public class ReceiveThread extends Thread {
                     int typeId = msgJSONObject.getInteger("typeId");
                     int playerId = msgJSONObject.getInteger("playerId");
                     String playerUname = msgJSONObject.getString("playerUname");
+                    String contentString = msgJSONObject.getString("contentString");
 
                     if (typeId == 3) {
                         // 不出牌消息
@@ -193,6 +270,7 @@ public class ReceiveThread extends Thread {
                         checkCha(playerId, outPokerList);
                     } else if (typeId == 5) {
                         // someone 叉
+                        System.out.println("叉: " + msgJSONObject);
                         mainFrame.chuPaiCountThread.setCha(true);
                         mainFrame.chuPaiCountThread.setChaPlayerId(playerId);
                         mainFrame.showMsg(typeId, playerUname);
@@ -206,9 +284,11 @@ public class ReceiveThread extends Thread {
                             mainFrame.chaJButton.setVisible(false);
                             // check if other player want to 勾
                             checkGou(outPokerList);
+                            checkOverChaGou(outPokerList, contentString);
                         }
                     } else if (typeId == 6) {
                         // someone 勾
+                        System.out.println("勾: " + msgJSONObject);
                         mainFrame.chuPaiCountThread.setGou(true);
                         mainFrame.chuPaiCountThread.setGouPlayerId(playerId);
                         mainFrame.showMsg(typeId, playerUname);
@@ -222,6 +302,20 @@ public class ReceiveThread extends Thread {
                             mainFrame.gouJButton.setVisible(false);
                             // check if other player want to 叉
                             checkCha(playerId, outPokerList);
+                            checkOverChaGou(outPokerList, contentString);
+                        }
+                    } else if (typeId == 7) {
+                        // set the player to go
+                        if (playerId == mainFrame.currentPlayer.getId()) {
+                            mainFrame.showChuPaiJButton(true);
+                            mainFrame.prevPlayerId = -1;
+                        } else {
+                            mainFrame.chuPaiJButton.setVisible(false);
+                            mainFrame.buChuJButton.setVisible(false);
+                            mainFrame.chaJButton.setVisible(false);
+                            mainFrame.gouJButton.setVisible(false);
+                            mainFrame.guanShangJButton.setVisible(false);
+                            mainFrame.timeLabel.setVisible(false);
                         }
                     } else if (typeId == 10) {
                         // some player played all pokers
