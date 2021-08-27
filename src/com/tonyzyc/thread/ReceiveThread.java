@@ -122,7 +122,7 @@ public class ReceiveThread extends Thread {
 
     private static <K, V> Map<K, V> parseToMap(String json) {
         return JSON.parseObject(json,
-                new TypeReference<>(Integer.class, Player.class) {
+                new TypeReference<Map<K, V>>(Integer.class, Player.class) {
                 });
     }
 
