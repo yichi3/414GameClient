@@ -10,7 +10,5 @@ Quick Start (To start the server)
 
     git clone https://github.com/yichi3/414GameClient.git
     cd 414GameClient
-    mkdir out
-    javac -cp lib/fastjson-1.2.78.jar -sourcepath src -d out src/com/tonyzyc/view/Main.java
-    cd out
-    java -cp ../lib/fastjson-1.2.78.jar:. com/tonyzyc/view/Main
+    javac -cp lib/fastjson-1.2.78.jar -sourcepath src -d . src/com/tonyzyc/view/Main.java
+    java -cp lib/fastjson-1.2.78.jar:. com/tonyzyc/view/Main
