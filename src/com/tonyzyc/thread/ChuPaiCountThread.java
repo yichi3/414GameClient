@@ -120,6 +120,16 @@ public class ChuPaiCountThread extends Thread {
                 e.printStackTrace();
             }
             mainFrame.sendThread.setMsg(msgJSONString);
+        } else if (mainFrame.pokerLabels.size() <= 3) {
+            msg = new Message(15, mainFrame.currentPlayer.getId(), mainFrame.currentPlayer.getPlayerUname(), "报片", null);
+            String msgJSONString = JSON.toJSONString(msg);
+            try {
+                // wait for 100 ms to avoid problem
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            mainFrame.sendThread.setMsg(msgJSONString);
         }
     }
 }

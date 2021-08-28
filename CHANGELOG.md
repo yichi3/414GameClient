@@ -17,3 +17,5 @@
   
 [1.0.0] 2021-08-27
 - Beta version released for testing
+- Adding 报片
+- Solve bugs when 管上 cannot disappear when other plays poker

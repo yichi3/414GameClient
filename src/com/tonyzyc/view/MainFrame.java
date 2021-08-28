@@ -283,6 +283,8 @@ public class MainFrame extends JFrame {
             System.out.println(uname + " show message: " + msg + " 勾");
         } else if (typeId == 10) {
             msgLabel.setText(msg + "出完牌了!");
+        } else if (typeId == 15) {
+            msgLabel.setText(msg + "报片!");
         }
         msgLabel.setFont(new Font("Dialog", 0, 20));
         msgLabel.setVisible(true);
@@ -334,8 +336,15 @@ public class MainFrame extends JFrame {
         // check if all pokers are out
         if (pokerLabels.size() == 0) {
             try {
-                Thread.sleep(1000);
+                Thread.sleep(100);
                 sendMsgToServer(new Message(10, currentPlayer.getId(), uname, "出完", null));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        } else if (pokerLabels.size() <= 3) {
+            try {
+                Thread.sleep(100);
+                sendMsgToServer(new Message(15, currentPlayer.getId(), uname, "报片", null));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -433,36 +442,36 @@ public class MainFrame extends JFrame {
                 sendMsgToServer(new Message(1, playerId, uname, numOfPlayers+"", null));
             } else if (e.getSource().equals(chuPaiJButton)) {
                 // need to check if the out poker is valid
-                if (selectedPokerLabels.size() == 0) {
-                    JOptionPane.showMessageDialog(null, "请出牌");
-                } else {
-                    PokerType pokerType = PokerRule.checkPokerType(selectedPokerLabels);
-                    if (!pokerType.equals(PokerType.p_error)) {
-                        if (prevPlayerId == -1 || prevPlayerId == currentPlayer.getId() || PokerRule.isBigger(showOutPokerLabels, selectedPokerLabels)) {
-                            // stop the counter
-                            isOut = true;
-                            chuPaiCountThread.setRun(false);
-                            chuPaiJButton.setVisible(false);
-                            buChuJButton.setVisible(false);
-                            timeLabel.setVisible(false);
-                            chaJButton.setVisible(false);
-                            gouJButton.setVisible(false);
-                            guanShangJButton.setVisible(false);
-                        } else {
-                            JOptionPane.showMessageDialog(null, "请按规则出牌");
-                        }
-                    } else {
-                        JOptionPane.showMessageDialog(null, "不符合牌型");
-                    }
-                }
-//                isOut = true;
-//                chuPaiCountThread.setRun(false);
-//                chuPaiJButton.setVisible(false);
-//                buChuJButton.setVisible(false);
-//                timeLabel.setVisible(false);
-//                chaJButton.setVisible(false);
-//                gouJButton.setVisible(false);
-//                guanShangJButton.setVisible(false);
+//                if (selectedPokerLabels.size() == 0) {
+//                    JOptionPane.showMessageDialog(null, "请出牌");
+//                } else {
+//                    PokerType pokerType = PokerRule.checkPokerType(selectedPokerLabels);
+//                    if (!pokerType.equals(PokerType.p_error)) {
+//                        if (prevPlayerId == -1 || prevPlayerId == currentPlayer.getId() || PokerRule.isBigger(showOutPokerLabels, selectedPokerLabels)) {
+//                            // stop the counter
+//                            isOut = true;
+//                            chuPaiCountThread.setRun(false);
+//                            chuPaiJButton.setVisible(false);
+//                            buChuJButton.setVisible(false);
+//                            timeLabel.setVisible(false);
+//                            chaJButton.setVisible(false);
+//                            gouJButton.setVisible(false);
+//                            guanShangJButton.setVisible(false);
+//                        } else {
+//                            JOptionPane.showMessageDialog(null, "请按规则出牌");
+//                        }
+//                    } else {
+//                        JOptionPane.showMessageDialog(null, "不符合牌型");
+//                    }
+//                }
+                isOut = true;
+                chuPaiCountThread.setRun(false);
+                chuPaiJButton.setVisible(false);
+                buChuJButton.setVisible(false);
+                timeLabel.setVisible(false);
+                chaJButton.setVisible(false);
+                gouJButton.setVisible(false);
+                guanShangJButton.setVisible(false);
             } else if (e.getSource().equals(buChuJButton)) {
                 isOut = false;
                 chuPaiCountThread.setRun(false);

@@ -14,6 +14,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -87,18 +88,17 @@ public class ReceiveThread extends Thread {
 
     private void checkOverChaGou(List<Poker> outPokerList, String content) {
         int lowerCount = Integer.parseInt(content), count = 0;
-        int num = outPokerList.get(0).getNum();
+        Map<Integer, Integer> pokerCount = new HashMap<>();
         boolean flag = false;
         for (PokerLabel p: mainFrame.pokerLabels) {
-            if (p.getNum() == num) {
-                count++;
-            }
-            if (count > lowerCount) {
+            int pCount = pokerCount.getOrDefault(p.getNum(), 0) + 1;
+            pokerCount.put(p.getNum(), pCount);
+            if (pCount > lowerCount) {
                 flag = true;
                 break;
             }
         }
-        if (flag || contain414()) {
+        if (flag || contain414() || containJokers(lowerCount)) {
             mainFrame.lowerCount = lowerCount;
             mainFrame.guanShangJButton.setVisible(true);
         }
@@ -118,6 +118,20 @@ public class ReceiveThread extends Thread {
             }
         }
         return two4 && oneA;
+    }
+
+    private boolean containJokers(int count) {
+        // 2 x number of jokers should larger than count
+        int jokerCount = 0;
+        for (PokerLabel p: mainFrame.pokerLabels) {
+            if (p.getNum() >= 16) {
+                jokerCount++;
+            }
+            if (jokerCount * 2 > count) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static <K, V> Map<K, V> parseToMap(String json) {
@@ -260,6 +274,7 @@ public class ReceiveThread extends Thread {
                         mainFrame.chaJButton.setVisible(false);
                         mainFrame.chaJButton.setVisible(false);
                         mainFrame.gouJButton.setVisible(false);
+                        mainFrame.guanShangJButton.setVisible(false);
                         List<Poker> outPokerList = getPokerListFromJSON(msgJSONObject);
                         mainFrame.showOutPokerList(outPokerList);
                         mainFrame.prevPlayerId = playerId;
@@ -325,6 +340,8 @@ public class ReceiveThread extends Thread {
                         // end game, reset everything
                         mainFrame.resetGame();
                         step = GameState.Start;
+                    } else if (typeId == 15) {
+                        mainFrame.showMsg(15, playerUname);
                     }
                 }
             }

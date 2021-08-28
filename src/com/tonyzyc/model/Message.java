@@ -19,6 +19,7 @@ public class Message implements Serializable {
     12: 有人回供
     13: 取消上供/回供/选供
     14: 有人选供
+    15: 有人报片
 
      */
     private int typeId;

@@ -19,6 +19,11 @@ public class Test {
         for (PokerLabel p: labels) {
             System.out.println(p);
         }
+//        try {
+//            myFun();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
     public static List<Poker> createPokers(int hunNum) {
@@ -44,5 +49,9 @@ public class Test {
         }
         Collections.shuffle(allPokers);
         return allPokers;
+    }
+
+    public static void myFun() throws Exception {
+        throw new Exception("this is a exception");
     }
 }
