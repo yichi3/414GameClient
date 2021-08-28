@@ -50,7 +50,7 @@ public class MainFrame extends JFrame {
     // store the current poker label list
     public List<PokerLabel> pokerLabels = new ArrayList<>();
     // counter thread, used to countdown for time
-    public ChuPaiCountThread chuPaiCountThread = new ChuPaiCountThread(100, this);
+    public ChuPaiCountThread chuPaiCountThread = new ChuPaiCountThread(30, this);
     // store the selected pokerLabels
     public List<PokerLabel> selectedPokerLabels = new ArrayList<>();
     public List<PokerLabel> selectedGongPokerLabels = new ArrayList<>();
@@ -248,7 +248,7 @@ public class MainFrame extends JFrame {
         timeLabel.setVisible(true);
         this.repaint();
         // start 出牌定时器
-        chuPaiCountThread = new ChuPaiCountThread(100, this);
+        chuPaiCountThread = new ChuPaiCountThread(30, this);
         chuPaiCountThread.start();
     }
 
@@ -415,7 +415,7 @@ public class MainFrame extends JFrame {
         huiGongJButton.setVisible(false);
         cancelGongJButton.setVisible(false);
         pokerLabels.clear();
-        chuPaiCountThread = new ChuPaiCountThread(100, this);
+        chuPaiCountThread = new ChuPaiCountThread(30, this);
         selectedPokerLabels.clear();
         isOut = false;
         prevPlayerId = -1;
